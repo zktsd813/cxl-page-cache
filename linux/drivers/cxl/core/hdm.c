@@ -561,15 +561,15 @@ int cxl_dpa_set_mode(struct cxl_endpoint_decoder *cxled,
 	 */
 	switch (mode) {
 	case CXL_DECODER_RAM:
-		if (resource_size(&cxlds->pmem_res) == 0) {
-			dev_dbg(dev, "no available pmem capacity\n");
+		if (resource_size(&cxlds->ram_res) == 0) {
+			dev_dbg(dev, "no available ram capacity\n");
 			rc = -ENXIO;
 			goto out;
 		}
 		break;
 	case CXL_DECODER_PMEM:
-		if (resource_size(&cxlds->ram_res) == 0) {
-			dev_dbg(dev, "no available ram capacity\n");
+		if (resource_size(&cxlds->pmem_res) == 0) {
+			dev_dbg(dev, "no available pmem capacity\n");
 			rc = -ENXIO;
 			goto out;
 		}

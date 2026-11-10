@@ -1867,7 +1867,9 @@ int cxl_mem_create_range_info(struct cxl_memdev_state *mds)
 	size_t untenanted_mem;
 	int rc;
 
-	untenanted_mem = mds->dc_region[0].base - mds->static_cap;
+	/* A device without DC regions has no gap before dynamic capacity. */
+	untenanted_mem = mds->nr_dc_region ?
+		mds->dc_region[0].base - mds->static_cap : 0;
 	mds->total_bytes = mds->static_cap + untenanted_mem + mds->dynamic_cap;
 
 	if (!cxlds->media_ready) {

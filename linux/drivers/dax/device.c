@@ -11,8 +11,19 @@
 #include <linux/fs.h>
 #include <linux/mm.h>
 #include <linux/mman.h>
+#include <linux/moduleparam.h>
 #include "dax-private.h"
 #include "bus.h"
+
+/* Experimental immutable pooling backing. Default-off and 4 KiB only.
+ * Callers must keep the shared backing immutable while private mappings exist.
+ * A private write allocates normal anonymous RAM, so the mapping ends up
+ * holding both CXL and DRAM pages.
+ * This does not provide cross-host cache coherence or frame lifetime control.
+ */
+static bool pool_cow;
+module_param(pool_cow, bool, 0444);
+MODULE_PARM_DESC(pool_cow, "Allow experimental 4K immutable private DAX mappings");
 
 static int check_vma(struct dev_dax *dev_dax, struct vm_area_struct *vma,
 		const char *func)
@@ -23,8 +34,9 @@ static int check_vma(struct dev_dax *dev_dax, struct vm_area_struct *vma,
 	if (!dax_alive(dev_dax->dax_dev))
 		return -ENXIO;
 
-	/* prevent private mappings from being established */
-	if ((vma->vm_flags & VM_MAYSHARE) != VM_MAYSHARE) {
+	/* Private mappings are a lab-only opt-in, and never use huge faults. */
+	if ((vma->vm_flags & VM_MAYSHARE) != VM_MAYSHARE &&
+	    (!pool_cow || dev_dax->align != PAGE_SIZE)) {
 		dev_info_ratelimited(dev,
 				"%s: %s: fail, attempted private mapping\n",
 				current->comm, func);
@@ -124,6 +136,20 @@ static vm_fault_t __dev_dax_pte_fault(struct dev_dax *dev_dax,
 	if (phys == -1) {
 		dev_dbg(dev, "pgoff_to_phys(%#lx) failed\n", vmf->pgoff);
 		return VM_FAULT_SIGBUS;
+	}
+
+	/* do_cow_fault supplies a freshly allocated, charged anonymous page
+	 * when the first access is a write. Do not insert the DAX PFN there.
+	 * Writes to an already present private PTE use generic wp_page_copy.
+	 */
+	if (vmf->cow_page) {
+		vm_fault_t ret;
+
+		copy_user_highpage(vmf->cow_page, pfn_to_page(PHYS_PFN(phys)),
+				  vmf->address, vmf->vma);
+		__SetPageUptodate(vmf->cow_page);
+		ret = finish_fault(vmf);
+		return ret ? ret : VM_FAULT_DONE_COW;
 	}
 
 	pfn = phys_to_pfn_t(phys, PFN_DEV|PFN_MAP);
@@ -239,6 +265,9 @@ static vm_fault_t dev_dax_huge_fault(struct vm_fault *vmf, unsigned int order)
 			(vmf->flags & FAULT_FLAG_WRITE) ? "write" : "read",
 			vmf->vma->vm_start, vmf->vma->vm_end, order);
 
+	if (!(vmf->vma->vm_flags & VM_SHARED) && order != 0)
+		return VM_FAULT_FALLBACK;
+
 	id = dax_read_lock();
 	if (order == 0)
 		rc = __dev_dax_pte_fault(dev_dax, vmf);
@@ -302,7 +331,10 @@ static int dax_mmap(struct file *filp, struct vm_area_struct *vma)
 		return rc;
 
 	vma->vm_ops = &dax_vm_ops;
-	vm_flags_set(vma, VM_HUGEPAGE);
+	if (vma->vm_flags & VM_SHARED)
+		vm_flags_set(vma, VM_HUGEPAGE);
+	else
+		vm_flags_set(vma, VM_NOHUGEPAGE);
 	return 0;
 }
 
