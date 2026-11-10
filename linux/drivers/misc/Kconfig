@@ -579,4 +579,14 @@ source "drivers/misc/cardreader/Kconfig"
 source "drivers/misc/uacce/Kconfig"
 source "drivers/misc/pvpanic/Kconfig"
 source "drivers/misc/mchp_pci1xxxx/Kconfig"
+config CXL_PAGECACHE_REG
+	tristate "Experimental read-only CXL page cache registration"
+	depends on X86_64 && EXT4_FS=y
+	select CRYPTO_LIB_SHA256
+	help
+	  Register bounded resident, clean ext4 folios for a controller and
+	  retain their references and locks until release or file close.
+	  The status page remains allocated for the host kernel lifetime.
+	  Module unloading is unsupported because controllers use this page.
+
 endmenu

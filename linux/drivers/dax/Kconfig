@@ -78,4 +78,12 @@ config DEV_DAX_KMEM
 
 	  Say N if unsure.
 
+config CXL_POOL
+	tristate "Experimental CXL pool mapper"
+	depends on DEV_DAX
+	help
+	  Map canonical read-only CXL frames and private copy-on-write frames
+	  for a host process. The controller supplies allocation credits and
+	  coordinates owner epochs and frame lifetime.
+
 endif
