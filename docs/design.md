@@ -50,7 +50,7 @@ host 사이에 하드웨어 cache coherence가 없다고 가정한다.
 
 - **host page cache와의 연결 지점**: mapper는 지금 프로세스 가상주소에 frame을 매핑한다. host kernel의 page cache(address_space)가 CXL frame을 직접 가리키게 할지, DAX 파일 매핑으로 노출할지, mmap 경로로 쓸지를 정해야 한다. 이 부분이 host 설계의 핵심이다.
 - **온라인 게시와 회수**: 이전 구현은 image 전체를 canonical 영역에 미리 적재했다. 필요한 page만 채우고 회수하는 경로가 없다.
-- **실제 장비 검증**: bud05의 CXL DCD(host 4대 공유)에서 게시·invalidate 순서, stale 읽기 negative test, host 사이 atomic을 확인해야 한다.
+- **실제 장비 검증**: Niagara CXL 장치에 연결된 서버에서 게시·invalidate 순서, stale 읽기 negative test, host 사이 atomic을 확인해야 한다. 그 서버의 CXL 드라이버 변경(Niagara 쪽)이 이 tree에는 없으므로, 부팅 전에 필요한 부분을 가져와야 한다.
 - **비용**: CXL에서 page cache를 읽을 때 느려지는 정도와, host당 줄어드는 메모리를 아직 재지 않았다.
 
 ## 6. 코드

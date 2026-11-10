@@ -11,7 +11,11 @@ Claude Code가 계획·판정·검토를 맡고, 구현과 실행은 이 서버�
 - 지시는 `.codex-runs/NN-<이름>.md` brief로 쓰고 `codex exec -C <repo> -s workspace-write --json -o .codex-runs/NN.last.md - < brief > .codex-runs/NN.jsonl`로 실행한다. 보고서는 `.codex-runs/NN-<이름>.report.md`. `.codex-runs/`는 Git에 넣지 않는다.
 - Codex 결과의 숫자는 원시 자료에서 다시 확인한 뒤 문서에 넣는다. commit은 검토 후 Claude가 하고, push는 사용자 허락을 받는다.
 
-## 서버 규칙 (bud05, hostname `ubuntu`)
+## 서버
+
+실행 대상은 Niagara CXL 장치에 연결된 서버다. 코드 작성과 컴파일 확인은 bud05에서 했다. 아래는 bud05에서 작업할 때의 규칙이다.
+
+### bud05 규칙 (hostname `ubuntu`)
 
 - NUMA 0(CPU 0-31, sibling 64-95, 메모리 node 0)만 쓴다. NUMA 1은 다른 사용자 작업이 있어 쓰지 않는다.
 - node 2는 host 4대가 공유하는 CXL DCD(128 GB, 2 GB block)다. 용량은 `dcdctl --mbox=remote --mbox-remote=http://143.248.188.99`로만 받는다. memory block을 직접 online하지 않는다. `dcdctl add/release`는 사용자 확인 후에만. `info` 같은 읽기 조회는 괜찮다.
