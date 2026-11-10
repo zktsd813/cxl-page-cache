@@ -1,0 +1,9 @@
+# Codex CLI run logs and briefs
+/.codex-runs/
+
+# Out-of-tree kernel build
+/build/
+
+# Python caches
+__pycache__/
+*.py[cod]
